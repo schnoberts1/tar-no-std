@@ -159,10 +159,64 @@ impl<'a> TarArchiveRef<'a> {
     pub const fn entries(&self) -> ArchiveIterator {
         ArchiveIterator::new(self.data)
     }
+
+    pub const fn headers(&self) -> HeaderIterator {
+        HeaderIterator::new(self.data)
+    }
 }
 
+
+#[derive(Debug)]
+pub struct HeaderIterator<'a>
+{
+    archive_data: &'a [u8],
+    block_index: usize,
+}
+
+impl<'a> HeaderIterator<'a> {
+    pub const fn new(archive: &'a [u8]) -> Self {
+        Self {
+            archive_data: archive,
+            block_index: 0,
+        }
+    }
+
+    /// Returns a reference to the next Header.
+    fn next_hdr(&self, block_index: usize) -> &'a PosixHeader {
+        let hdr_ptr = &self.archive_data[block_index * BLOCKSIZE];
+        unsafe { (hdr_ptr as *const u8).cast::<PosixHeader>().as_ref() }.unwrap()
+    }
+}
+
+impl<'a> Iterator for HeaderIterator<'a> {
+    type Item = PosixHeader;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.block_index * BLOCKSIZE >= self.archive_data.len() {
+            return None;
+        }
+
+        let mut hdr = self.next_hdr(self.block_index);
+
+        // check if we found end of archive
+        if hdr.is_zero_block() {
+            let next_hdr = self.next_hdr(self.block_index + 1);
+            // end of archive
+            return None;
+        }
+
+        // in next iteration: start at next Archive entry header
+        // +1 for current hdr block itself + all data blocks
+        let data_block_count: usize = hdr.payload_block_count().unwrap();
+        self.block_index += data_block_count + 1;
+        hdr = self.next_hdr(self.block_index);
+
+        Some(*hdr)
+    }
+}
 /// Iterator over the files of the archive. Each iteration starts
 /// at the next Tar header entry.
+
 #[derive(Debug)]
 pub struct ArchiveIterator<'a> {
     archive_data: &'a [u8],
@@ -286,7 +340,6 @@ mod tests {
         let entries = archive.entries().collect::<Vec<_>>();
         println!("{:#?}", entries);
     }
-
     /// Tests to read the entries from existing archives in various Tar flavors.
     #[test]
     fn test_archive_entries() {
@@ -323,13 +376,44 @@ mod tests {
 
     /// Tests to read the entries from an existing tarball with a directory in it
     #[test]
+    fn test_archive_with_long_dir_entries() {
+        // tarball created with:
+        //     $ cd tests; gtar --format=ustar -cf gnu_tar_ustar_long.tar 012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678 01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234/ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJ
+        let archive = TarArchiveRef::new(include_bytes!("../tests/gnu_tar_ustar_long.tar"));
+        let entries = archive.entries().collect::<Vec<_>>();
+
+        assert_eq!(entries.len(), 2);
+        // Maximum length of a directory and name when the directory itself is tar'd
+        assert_entry_content(&entries[0], "012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678/ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJ", 7);
+        // Maximum length of a directory and name when only the file is tar'd.
+        assert_entry_content(&entries[1], "01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234/ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJ", 7);
+    }
+
+    #[test]
+    fn test_archive_with_deep_dir_entries() {
+        // tarball created with:
+        //     $ cd tests; gtar --format=ustar -cf gnu_tar_ustar_deep.tar 0123456789
+        let archive = TarArchiveRef::new(include_bytes!("../tests/gnu_tar_ustar_deep.tar"));
+        let entries = archive.entries().collect::<Vec<_>>();
+
+        assert_eq!(entries.len(), 1);
+        assert_entry_content(&entries[0], "0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/empty", 0);
+
+        for h in archive.headers() {
+            println!("{:?}", h);
+        }
+    }
+
+    #[test]
     fn test_archive_with_dir_entries() {
         // tarball created with:
-        //     $ gtar -cf tests/gnu_tar_default_with_dir.tar --exclude '*.tar' tests
+        //     $ gtar -cf tests/gnu_tar_default_with_dir.tar --exclude '*.tar' --exclude '012345678*' tests
         let archive = TarArchiveRef::new(include_bytes!("../tests/gnu_tar_default_with_dir.tar"));
         let entries = archive.entries().collect::<Vec<_>>();
+
         assert_archive_with_dir_content(&entries);
     }
+
 
     /// Like [`test_archive_entries`] but with additional `alloc` functionality.
     #[cfg(feature = "alloc")]
