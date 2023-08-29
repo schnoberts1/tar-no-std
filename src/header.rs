@@ -30,7 +30,7 @@ SOFTWARE.
 
 #![allow(non_upper_case_globals)]
 
-use crate::{BLOCKSIZE, FILENAME_MAX_LEN, TarFormatString};
+use crate::{BLOCKSIZE, NAME_LEN, PREFIX_LEN, TarFormatString};
 use arrayvec::ArrayString;
 use core::fmt::{Debug, Formatter};
 use core::num::ParseIntError;
@@ -154,7 +154,7 @@ impl<const N: usize> Debug for StaticCString<N> {
 pub struct PosixHeader {
     /// Name. There is always a null byte, therefore
     /// the max len is 99.
-    pub name: TarFormatString<{ FILENAME_MAX_LEN }>,
+    pub name: TarFormatString<{ NAME_LEN }>,
     pub mode: Mode,
     pub uid: [u8; 8],
     pub gid: [u8; 8],
@@ -165,7 +165,7 @@ pub struct PosixHeader {
     pub typeflag: TypeFlag,
     /// Name. There is always a null byte, therefore
     /// the max len is 99.
-    pub linkname: TarFormatString<{ FILENAME_MAX_LEN }>,
+    pub linkname: TarFormatString<{ NAME_LEN }>,
     pub magic: TarFormatString<6>,
     pub version: TarFormatString<2>,
     /// Username. There is always a null byte, therefore
@@ -178,7 +178,7 @@ pub struct PosixHeader {
     pub dev_minor: [u8; 8],
     /// There is always a null byte, therefore
     /// the max len is N-1.
-    pub prefix: TarFormatString<155>,
+    pub prefix: TarFormatString<PREFIX_LEN>,
     // padding => to BLOCKSIZE bytes
     pub _pad: [u8; 12],
 }
