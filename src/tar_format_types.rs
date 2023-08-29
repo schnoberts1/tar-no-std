@@ -16,9 +16,19 @@ pub struct TarFormatString<const N: usize> {
     bytes: [u8; N]
 }
 
-use core::fmt::{Debug, Formatter, Result};
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct TarFormatOctal<const N: usize>(pub TarFormatString<N>);
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct TarFormatDecimal<const N: usize>(pub TarFormatString<N>);
+
+use core::fmt::{Debug, Formatter};
+use core::num::ParseIntError;
 use core::str::from_utf8;
 use core::ptr::copy_nonoverlapping;
+use num_traits::Num;
 
 impl<const N: usize> TarFormatString<N> {
     /// Constructor.
@@ -73,9 +83,56 @@ impl<const N: usize> TarFormatString<N> {
 }
 
 impl<const N: usize> Debug for TarFormatString<N> {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
         let sub_array = &self.bytes[0 .. self.len()];
         write!(f, "{},{} of {},{}", from_utf8(sub_array).unwrap(), self.len(), N, self.is_nul_terminated())
+    }
+}
+
+
+impl<const N: usize> TarFormatOctal<N> {
+    pub fn as_number<T>(&self) -> core::result::Result<T, T::FromStrRadixErr> where 
+    T: num_traits::Num {
+        match memchr::memchr2(32, 0, &self.0.bytes) {
+            None => T::from_str_radix(self.0.as_str(), 8),
+            Some(idx) => {
+                let sub_str = from_utf8(&self.0.bytes[..idx]).expect("byte array is not UTF-8");
+                T::from_str_radix(sub_str, 8)
+            }
+        }
+    }
+}
+
+impl<const N: usize> Debug for TarFormatOctal<N> {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
+        let sub_array = &self.0.bytes[0 .. self.0.len()];
+        match self.as_number::<u64>() {
+            Err(msg) => write!(f, "{} [{}]", msg, from_utf8(sub_array).unwrap()),
+            Ok(val) => write!(f, "{} [{}]", val, from_utf8(sub_array).unwrap())
+        }
+    }
+}
+
+impl<const N: usize> TarFormatDecimal<N> {
+    pub fn as_number<T>(&self) -> core::result::Result<T, T::FromStrRadixErr> where 
+    T: num_traits::Num {
+        match memchr::memchr2(32, 0, &self.0.bytes) {
+            None => T::from_str_radix(self.0.as_str(), 10),
+            Some(idx) => {
+                let sub_str = from_utf8(&self.0.bytes[..idx]).expect("byte array is not UTF-8");
+                T::from_str_radix(sub_str, 10)
+            }
+        }
+    }
+}
+
+impl<const N: usize> Debug for TarFormatDecimal<N> {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
+        let sub_array = &self.0.bytes[0 .. self.0.len()];
+        match self.as_number::<u64>() {
+            Err(msg) => write!(f, "{} [{}]", msg, from_utf8(sub_array).unwrap()),
+            Ok(val) => write!(f, "{} [{}]", val, from_utf8(sub_array).unwrap())
+        }
     }
 }
 

@@ -25,7 +25,7 @@ SOFTWARE.
 //! also exports `TarArchive`, which owns data on the heap.
 
 use crate::header::PosixHeader;
-use crate::tar_format_string::TarFormatString;
+use crate::tar_format_types::TarFormatString;
 use crate::{TypeFlag, BLOCKSIZE, POSIX_1003_MAX_FILENAME_LEN};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
@@ -195,7 +195,7 @@ impl<'a> Iterator for HeaderIterator<'a> {
             return None;
         }
 
-        let mut hdr = self.next_hdr(self.block_index);
+        let hdr = self.next_hdr(self.block_index);
 
         // check if we found end of archive
         if hdr.is_zero_block() {
@@ -203,13 +203,14 @@ impl<'a> Iterator for HeaderIterator<'a> {
             return None;
         }
 
+        let result = Some(*hdr);
+
         // in next iteration: start at next Archive entry header
         // +1 for current hdr block itself + all data blocks
-        let data_block_count: usize = hdr.payload_block_count().unwrap();
+        let data_block_count = hdr.payload_block_count().unwrap();
         self.block_index += data_block_count + 1;
-        hdr = self.next_hdr(self.block_index);
 
-        Some(*hdr)
+        result
     }
 }
 /// Iterator over the files of the archive. Each iteration starts
@@ -286,7 +287,7 @@ impl<'a> Iterator for ArchiveIterator<'a> {
             warn!("Found empty file name",);
         }
 
-        let hdr_size = hdr.size.val();
+        let hdr_size = hdr.size.as_number::<usize>();
         if let Err(e) = hdr_size {
             warn!("Can't parse the file size from the header block. Stop iterating Tar archive. {e:#?}");
             return None;
@@ -406,10 +407,22 @@ mod tests {
     fn test_archive_with_dir_entries() {
         // tarball created with:
         //     $ gtar -cf tests/gnu_tar_default_with_dir.tar --exclude '*.tar' --exclude '012345678*' tests
-        let archive = TarArchiveRef::new(include_bytes!("../tests/gnu_tar_default_with_dir.tar"));
-        let entries = archive.entries().collect::<Vec<_>>();
+        {
+            let archive = TarArchiveRef::new(include_bytes!("../tests/gnu_tar_default_with_dir.tar"));
+            let entries = archive.entries().collect::<Vec<_>>();
 
-        assert_archive_with_dir_content(&entries);
+            assert_archive_with_dir_content(&entries);
+        }
+
+        // tarball created with:
+        //     $(osx) tar -cf tests/mac_tar_ustar_with_dir.tar --format=ustar --exclude '*.tar' --exclude '012345678*' tests
+        {
+            let archive = TarArchiveRef::new(include_bytes!("../tests/mac_tar_ustar_with_dir.tar"));
+            let entries = archive.entries().collect::<Vec<_>>();
+
+            assert_archive_with_dir_content(&entries);
+        }
+
     }
 
 

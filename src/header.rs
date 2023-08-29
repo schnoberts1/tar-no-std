@@ -30,29 +30,9 @@ SOFTWARE.
 
 #![allow(non_upper_case_globals)]
 
-use crate::{BLOCKSIZE, NAME_LEN, PREFIX_LEN, TarFormatString};
+use crate::{BLOCKSIZE, NAME_LEN, PREFIX_LEN, TarFormatString, TarFormatOctal, TarFormatDecimal};
 use core::fmt::{Debug, Formatter};
 use core::num::ParseIntError;
-
-/// The file size is encoded as octal ASCII number inside a Tar header.
-#[derive(Copy, Clone)]
-#[repr(transparent)]
-pub struct Size(TarFormatString<12>);
-
-impl Size {
-    /// Returns the octal ASCII number as actual size in bytes.
-    pub fn val(&self) -> Result<usize, ParseIntError> {
-        usize::from_str_radix(self.0.as_str(), 8)
-    }
-}
-
-impl Debug for Size {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut debug = f.debug_tuple("Size");
-        debug.field(&self.val());
-        debug.finish()
-    }
-}
 
 #[derive(Debug)]
 pub enum ModeError {
@@ -63,14 +43,13 @@ pub enum ModeError {
 /// Wrapper around the UNIX file permissions given in octal ASCII.
 #[derive(Copy, Clone)]
 #[repr(transparent)]
-pub struct Mode(TarFormatString<8>);
+pub struct Mode(TarFormatOctal<8>);
 
 impl Mode {
     /// Parses the [`ModeFlags`] from the mode string.
     pub fn to_flags(self) -> Result<ModeFlags, ModeError> {
-        let octal_number_str = self.0.as_str();
         let bits =
-            u64::from_str_radix(octal_number_str, 8).map_err(ModeError::ParseInt)?;
+            self.0.as_number::<u64>().map_err(ModeError::ParseInt)?;
         ModeFlags::from_bits(bits).ok_or(ModeError::IllegalMode)
     }
 }
@@ -101,12 +80,12 @@ pub struct PosixHeader {
     /// the max len is 99.
     pub name: TarFormatString<NAME_LEN>,
     pub mode: Mode,
-    pub uid: [u8; 8],
-    pub gid: [u8; 8],
+    pub uid: TarFormatOctal<8>,
+    pub gid: TarFormatOctal<8>,
     // confusing; size is stored as ASCII string
-    pub size: Size,
-    pub mtime: [u8; 12],
-    pub cksum: [u8; 8],
+    pub size: TarFormatOctal<12>,
+    pub mtime: TarFormatDecimal<12>,
+    pub cksum: TarFormatOctal<8>,
     pub typeflag: TypeFlag,
     /// Name. There is always a null byte, therefore
     /// the max len is 99.
@@ -119,8 +98,8 @@ pub struct PosixHeader {
     /// Groupname. There is always a null byte, therefore
     /// the max len is N-1.
     pub gname: TarFormatString<32>,
-    pub dev_major: [u8; 8],
-    pub dev_minor: [u8; 8],
+    pub dev_major: TarFormatOctal<8>,
+    pub dev_minor: TarFormatOctal<8>,
     /// There is always a null byte, therefore
     /// the max len is N-1.
     pub prefix: TarFormatString<PREFIX_LEN>,
@@ -133,8 +112,8 @@ impl PosixHeader {
     /// content. Returns an error, if the file size can't be parsed from the
     /// header.
     pub fn payload_block_count(&self) -> Result<usize, ParseIntError> {
-        let div = self.size.val()? / BLOCKSIZE;
-        let modulo = self.size.val()? % BLOCKSIZE;
+        let div = self.size.as_number::<usize>()? / BLOCKSIZE;
+        let modulo = self.size.as_number::<usize>()? % BLOCKSIZE;
         let block_count = if modulo > 0 { div + 1 } else { div };
         Ok(block_count)
     }
