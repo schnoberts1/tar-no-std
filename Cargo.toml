@@ -26,8 +26,8 @@ alloc = []
 [dependencies]
 arrayvec = { version = "0.7", default-features = false }
 bitflags = "2.0"
-memchr = "2.5.0"
+memchr = { version = "2.5.0", default-features = false }
 log = { version = "0.4", default-features = false }
-num-traits = "0.2.16"
+num-traits =  { version = "0.2.16", default-features = false }
 [dev-dependencies]
 env_logger = "0.10"
