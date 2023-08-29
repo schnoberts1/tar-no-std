@@ -26,12 +26,11 @@ SOFTWARE.
 
 use crate::header::PosixHeader;
 use crate::tar_format_string::TarFormatString;
-use crate::{TypeFlag, BLOCKSIZE, NAME_LEN, POSIX_1003_MAX_FILENAME_LEN};
+use crate::{TypeFlag, BLOCKSIZE, POSIX_1003_MAX_FILENAME_LEN};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
-use arrayvec::ArrayString;
 use core::fmt::{Debug, Formatter};
-use core::str::{FromStr, Utf8Error};
+use core::str::Utf8Error;
 use log::warn;
 
 /// Describes an entry in an archive.
@@ -200,7 +199,6 @@ impl<'a> Iterator for HeaderIterator<'a> {
 
         // check if we found end of archive
         if hdr.is_zero_block() {
-            let next_hdr = self.next_hdr(self.block_index + 1);
             // end of archive
             return None;
         }

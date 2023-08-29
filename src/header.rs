@@ -31,19 +31,18 @@ SOFTWARE.
 #![allow(non_upper_case_globals)]
 
 use crate::{BLOCKSIZE, NAME_LEN, PREFIX_LEN, TarFormatString};
-use arrayvec::ArrayString;
 use core::fmt::{Debug, Formatter};
 use core::num::ParseIntError;
 
 /// The file size is encoded as octal ASCII number inside a Tar header.
 #[derive(Copy, Clone)]
 #[repr(transparent)]
-pub struct Size(StaticCString<12>);
+pub struct Size(TarFormatString<12>);
 
 impl Size {
     /// Returns the octal ASCII number as actual size in bytes.
     pub fn val(&self) -> Result<usize, ParseIntError> {
-        usize::from_str_radix(self.0.as_string().as_str(), 8)
+        usize::from_str_radix(self.0.as_str(), 8)
     }
 }
 
@@ -64,14 +63,14 @@ pub enum ModeError {
 /// Wrapper around the UNIX file permissions given in octal ASCII.
 #[derive(Copy, Clone)]
 #[repr(transparent)]
-pub struct Mode(StaticCString<8>);
+pub struct Mode(TarFormatString<8>);
 
 impl Mode {
     /// Parses the [`ModeFlags`] from the mode string.
     pub fn to_flags(self) -> Result<ModeFlags, ModeError> {
-        let octal_number_str = self.0.as_string();
+        let octal_number_str = self.0.as_str();
         let bits =
-            u64::from_str_radix(octal_number_str.as_str(), 8).map_err(ModeError::ParseInt)?;
+            u64::from_str_radix(octal_number_str, 8).map_err(ModeError::ParseInt)?;
         ModeFlags::from_bits(bits).ok_or(ModeError::IllegalMode)
     }
 }
@@ -80,60 +79,6 @@ impl Debug for Mode {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut debug = f.debug_tuple("Mode");
         debug.field(&self.to_flags());
-        debug.finish()
-    }
-}
-
-/// A C-String that is stored in a static array. There is always a terminating
-/// NULL-byte.
-///
-/// The content is likely to be UTF-8/ASCII, but that is not verified by this
-/// type.
-#[derive(Copy, Clone)]
-#[repr(transparent)]
-pub struct StaticCString<const N: usize>([u8; N]);
-
-#[allow(unused)]
-impl<const N: usize> StaticCString<N> {
-    /// Constructor.
-    const fn new(bytes: [u8; N]) -> Self {
-        Self(bytes)
-    }
-
-    /// Returns the length of the string without NULL-byte.
-    pub fn len(&self) -> usize {
-        // not as efficient as it could be but negligible
-        self.as_string().len()
-    }
-
-    /// Returns if the string without NULL-byte is empty.
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    /// Returns a string that includes all characters until the first null.
-    pub fn as_string(&self) -> ArrayString<N> {
-        let mut string = ArrayString::new();
-        self.0
-            .clone()
-            .iter()
-            .copied()
-            // Take all chars until the terminating null.
-            .take_while(|byte| *byte != 0)
-            .for_each(|byte| string.push(byte as char));
-        string
-    }
-}
-
-impl<const N: usize> Debug for StaticCString<N> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        let mut debug = f.debug_tuple("Name");
-        let str = self.as_string();
-        if str.is_empty() {
-            debug.field(&"<empty>");
-        } else {
-            debug.field(&str);
-        }
         debug.finish()
     }
 }
@@ -154,7 +99,7 @@ impl<const N: usize> Debug for StaticCString<N> {
 pub struct PosixHeader {
     /// Name. There is always a null byte, therefore
     /// the max len is 99.
-    pub name: TarFormatString<{ NAME_LEN }>,
+    pub name: TarFormatString<NAME_LEN>,
     pub mode: Mode,
     pub uid: [u8; 8],
     pub gid: [u8; 8],
@@ -165,7 +110,7 @@ pub struct PosixHeader {
     pub typeflag: TypeFlag,
     /// Name. There is always a null byte, therefore
     /// the max len is 99.
-    pub linkname: TarFormatString<{ NAME_LEN }>,
+    pub linkname: TarFormatString<NAME_LEN>,
     pub magic: TarFormatString<6>,
     pub version: TarFormatString<2>,
     /// Username. There is always a null byte, therefore
@@ -292,7 +237,7 @@ bitflags::bitflags! {
 
 #[cfg(test)]
 mod tests {
-    use crate::header::{PosixHeader, StaticCString, TypeFlag};
+    use crate::header::{PosixHeader, TypeFlag};
     use crate::BLOCKSIZE;
     use std::mem::size_of;
 
@@ -403,12 +348,5 @@ mod tests {
     #[test]
     fn test_size() {
         assert_eq!(BLOCKSIZE, size_of::<PosixHeader>());
-    }
-
-    #[test]
-    fn test_static_str() {
-        let str = StaticCString::new(*b"0000633\0");
-        assert_eq!(str.len(), 7);
-        assert_eq!(str.as_string().as_str(), "0000633");
     }
 }
