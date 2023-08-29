@@ -77,8 +77,6 @@ impl Debug for Mode {
 #[derive(Debug, Copy, Clone)]
 #[repr(C, packed)]
 pub struct PosixHeader {
-    /// Name. There is always a null byte, therefore
-    /// the max len is 99.
     pub name: TarFormatString<NAME_LEN>,
     pub mode: Mode,
     pub uid: TarFormatOctal<8>,
@@ -101,8 +99,6 @@ pub struct PosixHeader {
     pub gname: TarFormatString<32>,
     pub dev_major: TarFormatOctal<8>,
     pub dev_minor: TarFormatOctal<8>,
-    /// There is always a null byte, therefore
-    /// the max len is N-1.
     pub prefix: TarFormatString<PREFIX_LEN>,
     // padding => to BLOCKSIZE bytes
     pub _pad: [u8; 12],
