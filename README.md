@@ -1,4 +1,4 @@
-# `tar-no-std` - Parse Tar Archives (Tarballs)
+# `tar-no-std-extended` - Parse Tar Archives (Tarballs)
 
 _Due to historical reasons, there are several formats of tar archives. All of them are based on the same principles,
 but have some subtle differences that often make them incompatible with each other._ [[0]]
@@ -24,7 +24,7 @@ archive formats and their limitations.
 
 ## Example (without `alloc`-feature)
 ```rust
-use tar_no_std::TarArchiveRef;
+use tar_no_std_extended::TarArchiveRef;
 
 fn main() {
     // log: not mandatory

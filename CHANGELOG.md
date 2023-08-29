@@ -1,4 +1,4 @@
-# v0.3.0 (2023-08-29)
+# v0.3.0 (2023-08-29) - Andy Schneider
 - Handle directories.
 - Fix defect in header type declaration.
 - Fix defect handling octal numbers with historical space padding.

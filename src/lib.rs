@@ -46,7 +46,7 @@ SOFTWARE.
 //!
 //! # Example
 //! ```rust
-//! use tar_no_std::TarArchiveRef;
+//! use tar_no_std_extended::TarArchiveRef;
 //!
 //! // log: not mandatory
 //! std::env::set_var("RUST_LOG", "trace");

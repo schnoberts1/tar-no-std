@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-use tar_no_std::TarArchiveRef;
+use tar_no_std_extended::TarArchiveRef;
 
 fn main() {
     // log: not mandatory

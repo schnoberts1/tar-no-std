@@ -26,7 +26,7 @@ SOFTWARE.
 fn main(){}
 
 #[cfg(feature = "alloc")]
-use tar_no_std::TarArchive;
+use tar_no_std_extended::TarArchive;
 
 /// This example needs the `alloc` feature.
 #[cfg(feature = "alloc")]

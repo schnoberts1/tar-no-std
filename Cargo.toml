@@ -1,5 +1,5 @@
 [package]
-name = "tar-no-std"
+name = "tar-no-std-extended"
 description = """
 Library to read Tar archives (by GNU Tar) in `no_std` contexts with zero allocations. Based on [tar-no-std](https://github.com/phip1611/tar-no-std)
 The crate is simple and only supports reading of "basic" archives, therefore no extensions, such
