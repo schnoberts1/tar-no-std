@@ -397,10 +397,6 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_entry_content(&entries[0], "0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/0123456789/empty", 0);
-
-        for h in archive.headers() {
-            println!("{:?}", h);
-        }
     }
 
     #[test]
@@ -422,7 +418,6 @@ mod tests {
 
             assert_archive_with_dir_content(&entries);
         }
-
     }
 
 

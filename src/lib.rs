@@ -2,6 +2,7 @@
 MIT License
 
 Copyright (c) 2023 Philipp Schuster
+Copyright (c) 2023 Andy Schneider
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -91,7 +92,7 @@ extern crate alloc;
 const BLOCKSIZE: usize = 512;
 /// Maximum filename length of the base Tar format including the terminating NULL-byte.
 const NAME_LEN: usize = 100;
-/// Maximum long filename length of the base Tar format including the prefix a '/'
+/// Maximum long filename length of the base Tar format including the prefix
 const POSIX_1003_MAX_FILENAME_LEN: usize = 256;
 /// Maximum length of the prefix in Posix tar format
 const PREFIX_LEN: usize = 155;
