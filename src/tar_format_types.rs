@@ -3,11 +3,7 @@
 /// An optionally null terminated string. The contents are either:
 /// 1. A fully populated string with no null termination or
 /// 2. A partially populated string where the unused bytes are zero.
-
-
-/// A C-String that is stored in a static array. There is always a terminating
-/// NULL-byte.
-///
+/// 
 /// The content is likely to be UTF-8/ASCII, but that is not verified by this
 /// type.
 #[derive(Copy, Clone)]
@@ -16,13 +12,20 @@ pub struct TarFormatString<const N: usize> {
     bytes: [u8; N]
 }
 
+/// A number. Trailing spaces in the string are ignored.
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TarFormatOctal<const N: usize>(pub TarFormatString<N>);
+pub struct TarFormatNumber<const N: usize, const R: u32>(TarFormatString<N>);
 
+/// An octal number. Trailing spaces in the string are ignored.
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct TarFormatDecimal<const N: usize>(pub TarFormatString<N>);
+pub struct TarFormatOctal<const N: usize>(TarFormatNumber<N, 8>);
+
+/// A decimal number. Trailing spaces in the string are ignored.
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct TarFormatDecimal<const N: usize>(TarFormatNumber<N, 10>);
 
 use core::fmt::{Debug, Formatter};
 use core::num::ParseIntError;
@@ -36,15 +39,15 @@ impl<const N: usize> TarFormatString<N> {
         if N == 0 {
             panic!("Array cannot be zero length");
         }
-        Self {bytes }
+        Self { bytes }
     }
 
-    /// Returns if the string empty (ignoring NULL bytes).
+    /// True if the string empty (ignoring NULL bytes).
     pub const fn is_empty(&self) -> bool {
         self.bytes[0] == 0
     }
 
-    // Returns if the string is NULL terminated
+    // True if the string is NULL terminated
     pub const fn is_nul_terminated(&self) -> bool {
         return self.bytes[N-1] == 0;
     }
@@ -89,12 +92,11 @@ impl<const N: usize> Debug for TarFormatString<N> {
     }
 }
 
-
-impl<const N: usize> TarFormatOctal<N> {
+impl<const N: usize, const R: u32> TarFormatNumber<N, R> {
     pub fn as_number<T>(&self) -> core::result::Result<T, T::FromStrRadixErr> where 
     T: num_traits::Num {
         match memchr::memchr2(32, 0, &self.0.bytes) {
-            None => T::from_str_radix(self.0.as_str(), 8),
+            None => T::from_str_radix(self.0.as_str(), R),
             Some(idx) => {
                 let sub_str = from_utf8(&self.0.bytes[..idx]).expect("byte array is not UTF-8");
                 T::from_str_radix(sub_str, 8)
@@ -103,38 +105,43 @@ impl<const N: usize> TarFormatOctal<N> {
     }
 }
 
-impl<const N: usize> Debug for TarFormatOctal<N> {
+impl<const N: usize, const R: u32> Debug for TarFormatNumber<N, R> {
     fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
         let sub_array = &self.0.bytes[0 .. self.0.len()];
         match self.as_number::<u64>() {
             Err(msg) => write!(f, "{} [{}]", msg, from_utf8(sub_array).unwrap()),
             Ok(val) => write!(f, "{} [{}]", val, from_utf8(sub_array).unwrap())
         }
+    }
+}
+
+
+impl<const N: usize> Debug for TarFormatOctal<N> {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<const N: usize> Debug for TarFormatDecimal<N> {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
 impl<const N: usize> TarFormatDecimal<N> {
     pub fn as_number<T>(&self) -> core::result::Result<T, T::FromStrRadixErr> where 
     T: num_traits::Num {
-        match memchr::memchr2(32, 0, &self.0.bytes) {
-            None => T::from_str_radix(self.0.as_str(), 10),
-            Some(idx) => {
-                let sub_str = from_utf8(&self.0.bytes[..idx]).expect("byte array is not UTF-8");
-                T::from_str_radix(sub_str, 10)
-            }
-        }
+        self.0.as_number::<T>()
     }
 }
 
-impl<const N: usize> Debug for TarFormatDecimal<N> {
-    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
-        let sub_array = &self.0.bytes[0 .. self.0.len()];
-        match self.as_number::<u64>() {
-            Err(msg) => write!(f, "{} [{}]", msg, from_utf8(sub_array).unwrap()),
-            Ok(val) => write!(f, "{} [{}]", val, from_utf8(sub_array).unwrap())
-        }
+impl<const N: usize> TarFormatOctal<N> {
+    pub fn as_number<T>(&self) -> core::result::Result<T, T::FromStrRadixErr> where 
+    T: num_traits::Num {
+        self.0.as_number::<T>()
     }
 }
+
 
 mod tests
 {
