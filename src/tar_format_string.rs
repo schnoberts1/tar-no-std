@@ -74,8 +74,8 @@ impl<const N: usize> TarFormatString<N> {
 
 impl<const N: usize> Debug for TarFormatString<N> {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        let sub_array: &[u8] = &self.bytes[0 .. self.len()];
-        write!(f, "{:?}", sub_array.to_vec())
+        let sub_array = &self.bytes[0 .. self.len()];
+        write!(f, "{}", from_utf8(sub_array).unwrap())
     }
 }
 

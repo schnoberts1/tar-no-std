@@ -25,6 +25,7 @@ SOFTWARE.
 //! also exports `TarArchive`, which owns data on the heap.
 
 use crate::header::PosixHeader;
+use crate::tar_format_string::TarFormatString;
 use crate::{TypeFlag, BLOCKSIZE, FILENAME_MAX_LEN};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
@@ -36,14 +37,14 @@ use log::warn;
 /// Describes an entry in an archive.
 /// Currently only supports files but no directories.
 pub struct ArchiveEntry<'a> {
-    filename: ArrayString<FILENAME_MAX_LEN>,
+    filename: TarFormatString<FILENAME_MAX_LEN>,
     data: &'a [u8],
     size: usize,
 }
 
 #[allow(unused)]
 impl<'a> ArchiveEntry<'a> {
-    const fn new(filename: ArrayString<FILENAME_MAX_LEN>, data: &'a [u8]) -> Self {
+    const fn new(filename: TarFormatString<FILENAME_MAX_LEN>, data: &'a [u8]) -> Self {
         ArchiveEntry {
             filename,
             data,
@@ -53,7 +54,7 @@ impl<'a> ArchiveEntry<'a> {
 
     /// Filename of the entry with a maximum of 100 characters (including the
     /// terminating NULL-byte).
-    pub const fn filename(&self) -> ArrayString<{ FILENAME_MAX_LEN }> {
+    pub const fn filename(&self) -> TarFormatString<{ FILENAME_MAX_LEN }> {
         self.filename
     }
 
@@ -259,11 +260,7 @@ impl<'a> Iterator for ArchiveIterator<'a> {
         // +1 for current hdr block itself + all data blocks
         self.block_index += data_block_count + 1;
 
-        let filename = ArrayString::from_str(hdr.name.as_string().as_str());
-        // .unwrap is fine as the capacity is MUST be ok.
-        let filename = filename.unwrap();
-
-        Some(ArchiveEntry::new(filename, file_bytes))
+        Some(ArchiveEntry::new(hdr.name, file_bytes))
     }
 }
 

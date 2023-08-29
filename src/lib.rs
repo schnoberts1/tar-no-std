@@ -96,8 +96,8 @@ const PREFIXED_FILENAME_MAX_LEN: usize = 257;
 
 mod archive;
 mod header;
-mod fixed_len_string;
+mod tar_format_string;
 
 pub use archive::*;
 pub use header::*;
-pub use fixed_len_string::*;
+pub use tar_format_string::*;

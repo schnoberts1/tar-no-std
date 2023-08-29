@@ -30,7 +30,7 @@ SOFTWARE.
 
 #![allow(non_upper_case_globals)]
 
-use crate::{BLOCKSIZE, FILENAME_MAX_LEN};
+use crate::{BLOCKSIZE, FILENAME_MAX_LEN, TarFormatString};
 use arrayvec::ArrayString;
 use core::fmt::{Debug, Formatter};
 use core::num::ParseIntError;
@@ -154,7 +154,7 @@ impl<const N: usize> Debug for StaticCString<N> {
 pub struct PosixHeader {
     /// Name. There is always a null byte, therefore
     /// the max len is 99.
-    pub name: StaticCString<{ FILENAME_MAX_LEN }>,
+    pub name: TarFormatString<{ FILENAME_MAX_LEN }>,
     pub mode: Mode,
     pub uid: [u8; 8],
     pub gid: [u8; 8],
@@ -165,20 +165,20 @@ pub struct PosixHeader {
     pub typeflag: TypeFlag,
     /// Name. There is always a null byte, therefore
     /// the max len is 99.
-    pub linkname: StaticCString<{ FILENAME_MAX_LEN }>,
-    pub magic: StaticCString<6>,
-    pub version: StaticCString<2>,
+    pub linkname: TarFormatString<{ FILENAME_MAX_LEN }>,
+    pub magic: TarFormatString<6>,
+    pub version: TarFormatString<2>,
     /// Username. There is always a null byte, therefore
     /// the max len is N-1.
-    pub uname: StaticCString<32>,
+    pub uname: TarFormatString<32>,
     /// Groupname. There is always a null byte, therefore
     /// the max len is N-1.
-    pub gname: StaticCString<32>,
+    pub gname: TarFormatString<32>,
     pub dev_major: [u8; 8],
     pub dev_minor: [u8; 8],
     /// There is always a null byte, therefore
     /// the max len is N-1.
-    pub prefix: StaticCString<155>,
+    pub prefix: TarFormatString<155>,
     // padding => to BLOCKSIZE bytes
     pub _pad: [u8; 12],
 }
@@ -354,7 +354,7 @@ mod tests {
             TypeFlag::REGTYPE,
             "the first entry is a regular file!"
         );
-        assert_eq!(archive.name.as_string().as_str(), "bye_world_513b.txt");
+        assert_eq!(archive.name.as_str(), "bye_world_513b.txt");
 
         let archive = bytes_to_archive(include_bytes!("../tests/gnu_tar_gnu.tar"));
         assert_eq!(
@@ -362,7 +362,7 @@ mod tests {
             TypeFlag::REGTYPE,
             "the first entry is a regular file!"
         );
-        assert_eq!(archive.name.as_string().as_str(), "bye_world_513b.txt");
+        assert_eq!(archive.name.as_str(), "bye_world_513b.txt");
 
         let archive = bytes_to_archive(include_bytes!("../tests/gnu_tar_oldgnu.tar"));
         assert_eq!(
@@ -370,7 +370,7 @@ mod tests {
             TypeFlag::REGTYPE,
             "the first entry is a regular file!"
         );
-        assert_eq!(archive.name.as_string().as_str(), "bye_world_513b.txt");
+        assert_eq!(archive.name.as_str(), "bye_world_513b.txt");
 
         /* UNSUPPORTED YET. Uses extensions..
         let archive = bytes_to_archive(include_bytes!("../tests/gnu_tar_pax.tar"));
@@ -388,7 +388,7 @@ mod tests {
             TypeFlag::REGTYPE,
             "the first entry is a regular file!"
         );
-        assert_eq!(archive.name.as_string().as_str(), "bye_world_513b.txt");
+        assert_eq!(archive.name.as_str(), "bye_world_513b.txt");
 
         let archive = bytes_to_archive(include_bytes!("../tests/gnu_tar_v7.tar"));
         // ARegType: legacy
@@ -397,7 +397,7 @@ mod tests {
             TypeFlag::AREGTYPE,
             "the first entry is a regular file!"
         );
-        assert_eq!(archive.name.as_string().as_str(), "bye_world_513b.txt");
+        assert_eq!(archive.name.as_str(), "bye_world_513b.txt");
     }
 
     #[test]
